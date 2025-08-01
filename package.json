@@ -1,0 +1,9 @@
+{
+  "name": "together-ai-proxy-server",
+  "version": "1.0.0",
+  "description": "Proxy seguro para la API de Together AI",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  }
+}
