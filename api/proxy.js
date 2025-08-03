@@ -1,36 +1,31 @@
-// No se necesita ninguna librería especial, solo `fetch` que ya viene con la plataforma de Vercel
-
 export default async function handler(req, res) {
-  // Configuración de CORS para permitir solicitudes desde cualquier dominio.
-  // Para mayor seguridad, puedes cambiar '*' por la URL de tu blog.
-  // Ejemplo: res.setHeader('Access-Control-Allow-Origin', 'https://tu-blog.com');
-  res.setHeader('Access-Control-Allow-Origin', '*'); 
+  // Configuración de CORS para permitir que tu blog hable con este servidor
+  res.setHeader('Access-Control-Allow-Origin', '*'); // Puedes cambiar '*' por la URL de tu blog para más seguridad
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Title, HTTP-Referer');
 
-  // El navegador envía una solicitud OPTIONS "pre-vuelo" para comprobar los permisos CORS antes de enviar la solicitud POST.
+  // El navegador envía una solicitud "pre-vuelo" (OPTIONS) para comprobar los permisos.
+  // Respondemos que sí para permitir la solicitud real.
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
 
-  // Solo permitimos solicitudes de tipo POST, rechazamos cualquier otra
+  // Solo aceptamos solicitudes de tipo POST
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
   try {
-    // Obtenemos la clave API de forma segura desde las variables de entorno de Vercel
-    // Este nombre (TOGETHER_API_KEY) debe coincidir con el que configures en Vercel.
-    const apiKey = process.env.TOGETHER_API_KEY; 
+    // 1. Obtenemos la clave API de OpenRouter desde las variables de entorno seguras de Vercel
+    const apiKey = process.env.OPENROUTER_API_KEY; 
     if (!apiKey) {
-      throw new Error("La clave API de Together AI no está configurada en el servidor.");
+      throw new Error("La clave API de OpenRouter no está configurada en el servidor.");
     }
 
-    // Recogemos los datos que el formulario del blog nos envía en el cuerpo de la solicitud
+    // 2. Recogemos las instrucciones del formulario del blog
     const { keywords, searchIntent, wordCount, language, toneStyle, externalLinks, editingOutline, realtimeKnowledge } = req.body;
 
-    // Construimos el "prompt" o las instrucciones para la IA.
-    // Esta parte es la que puedes personalizar para cambiar lo que hace la IA.
+    // 3. Construimos el prompt para la IA (esto no cambia)
     let prompt = `Genera un artículo completo y bien estructurado.`;
     if (editingOutline) {
         prompt += ` Primero, proporciona un esquema de edición detallado. Luego, escribe el artículo basándote en ese esquema.`;
@@ -45,43 +40,42 @@ export default async function handler(req, res) {
         prompt += `\nIncluye sugerencias de enlaces externos relevantes.`;
     }
     if (realtimeKnowledge) {
-      // Nota: El modelo base no está conectado a internet. Esta instrucción es una sugerencia para el estilo del modelo.
       prompt += `\nUtiliza conocimiento general actualizado si es relevante para el tema.`;
     }
     prompt += `\nEl artículo debe ser coherente, atractivo y cumplir con todas las especificaciones. Formatea la respuesta en Markdown.`;
 
-    // Hacemos la llamada a la API de Together AI
-    const response = await fetch('https://api.together.xyz/v1/chat/completions', {
+    // 4. Hacemos la llamada a la API de OpenRouter
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}` // La autenticación se hace con un encabezado "Bearer"
+        'Authorization': `Bearer ${apiKey}`,
+        // OpenRouter recomienda estos encabezados para identificar tu aplicación
+        'HTTP-Referer': 'https://www.techebooks.online/', // <-- ¡IMPORTANTE! Reemplaza esto con la URL real de tu blog
+        'X-Title': 'Generador de Articulos IA' 
       },
       body: JSON.stringify({
-        model: 'meta-llama/Llama-3-70b-chat-hf', // Modelo recomendado: Llama 3 de 70B. Es excelente.
+        model: 'deepseek/deepseek-chat', // <-- Usando el modelo de DeepSeek en OpenRouter
         messages: [{ role: 'user', content: prompt }],
-        max_tokens: 2500, // Límite de tokens para la respuesta para evitar artículos excesivamente largos
-        temperature: 0.8, // Un valor entre 0.7 y 0.9 suele ser bueno para la creatividad
+        max_tokens: 2500,
+        temperature: 0.8,
         top_p: 0.8,
       }),
     });
 
-    // Verificamos si la llamada a la API tuvo algún error
+    // 5. Verificamos si la llamada fue exitosa
     if (!response.ok) {
         const errorData = await response.json();
-        // Lanzamos un error con el mensaje que nos da la API para poder depurar
-        throw new Error(`Error de la API de Together AI: ${errorData.error ? errorData.error.message : response.statusText}`);
+        throw new Error(`Error de la API de OpenRouter: ${errorData.error ? errorData.error.message : response.statusText}`);
     }
 
+    // 6. Extraemos y devolvemos el artículo
     const result = await response.json();
-    // Extraemos el texto del artículo generado de la estructura de la respuesta
     const text = result.choices[0].message.content;
 
-    // Enviamos el artículo generado de vuelta al blog
     res.status(200).json({ articleContent: text });
 
   } catch (error) {
-    // Si algo falla en cualquier punto, registramos el error en los logs de Vercel y enviamos un mensaje de error genérico
     console.error('Error en el proxy:', error);
     res.status(500).json({ error: 'Ocurrió un error al contactar con la IA.' });
   }
