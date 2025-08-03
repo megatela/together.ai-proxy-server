@@ -35,7 +35,7 @@ export default async function handler(req, res) {
     if (realtimeKnowledge) {
       prompt += `\nUtiliza conocimiento general actualizado si es relevante para el tema.`;
     }
-    prompt += `\nEl artículo debe ser coherente, atractivo y cumplir con todas las especificaciones. Formatea la respuesta en Markdown.`;
+    prompt += `\nEl artículo debe ser coherente, atractivo y cumplir con todas las especificaciones.`;
 
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
