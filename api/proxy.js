@@ -55,7 +55,7 @@ export default async function handler(req, res) {
         'X-Title': 'Generador de Articulos IA' 
       },
       body: JSON.stringify({
-        model: 'deepseek/deepseek-chat', // <-- Usando el modelo de DeepSeek en OpenRouter
+        model: 'mistralai/mistral-7b-instruct', // <-- Usando el modelo de DeepSeek en OpenRouter
         messages: [{ role: 'user', content: prompt }],
         max_tokens: 2500,
         temperature: 0.8,
