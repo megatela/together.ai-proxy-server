@@ -17,33 +17,38 @@ export default async function handler(req, res) {
       throw new Error("La clave API de OpenRouter no está configurada en el servidor.");
     }
 
-    // ======================================================
-    // ========= CAMBIO #1: Recogemos el nuevo dato =========
-    // ======================================================
     const { keywords, articleTopic, searchIntent, wordCount, language, toneStyle, externalLinks, editingOutline, realtimeKnowledge } = req.body;
 
-    // ========================================================
-    // ========= CAMBIO #2: Mejoramos el prompt con el tema =========
-    // ========================================================
-    let prompt = `Genera un artículo completo y bien estructurado sobre el siguiente tema principal: "${articleTopic}".
-Usa las siguientes palabras clave de apoyo de forma natural a lo largo del texto: ${keywords}.`;
+    // =========================================================================
+    // ========= INICIO DE LA MODIFICACIÓN: PROMPT MÁS ESTRICTO Y DIRECTO =========
+    // =========================================================================
+
+    let prompt = `Tu tarea principal y única es escribir un artículo de alta calidad.
+
+LA INSTRUCCIÓN MÁS IMPORTANTE E INNEGOCIABLE ES EL TEMA. IGNORA CUALQUIER OTRA COSA SI ENTRA EN CONFLICTO CON ESTO.
+EL TEMA PRINCIPAL DEL ARTÍCULO ES: "${articleTopic}"
+
+Ahora, debes escribir el artículo siguiendo ESTRICTAMENTE las siguientes reglas secundarias:
+
+1.  **PALABRAS CLAVE DE APOYO:** Integra de forma natural las siguientes palabras clave a lo largo del texto: ${keywords}.
+2.  **INTENCIÓN:** La intención de búsqueda es ${searchIntent}.
+3.  **LONGITUD:** La extensión MÁXIMA es de ${wordCount} palabras. NO excedas esta cantidad.
+4.  **IDIOMA:** El artículo debe estar escrito en ${language}.
+5.  **TONO:** El tono y estilo debe ser ${toneStyle}.
+6.  **FORMATO:** El resultado debe ser texto plano. NO USES FORMATO MARKDOWN. No incluyas ningún carácter como '#', '**', o '-' para listas. Usa solo saltos de línea para separar párrafos.
+`;
 
     if (editingOutline) {
-        prompt += `\nPrimero, proporciona un esquema de edición detallado para el artículo. Luego, escribe el artículo basándote en ese esquema.`;
+        prompt += `7. **ESQUEMA:** Primero, proporciona un esquema de edición detallado para el artículo. Luego, escribe el artículo completo basándote en ese esquema.\n`;
     }
     
-    prompt += `
-      El artículo debe cumplir las siguientes condiciones:
-      - Intención de búsqueda: ${searchIntent}.
-      - Extensión MÁXIMA: ${wordCount} palabras. No excedas esta cantidad.
-      - Idioma: ${language}.
-      - Tono y estilo: ${toneStyle}.`;
-      
     if (externalLinks) {
-        prompt += `\n- Incluye sugerencias de enlaces externos relevantes.`;
+        prompt += `8. **ENLACES:** Incluye sugerencias de enlaces externos relevantes.\n`;
     }
-    
-    prompt += `\nEl resultado debe ser coherente, atractivo y formateado en Markdown.`;
+
+    // =======================================================================
+    // ========= FIN DE LA MODIFICACIÓN: PROMPT MÁS ESTRICTO Y DIRECTO =========
+    // =======================================================================
 
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
@@ -57,7 +62,7 @@ Usa las siguientes palabras clave de apoyo de forma natural a lo largo del texto
         model: 'deepseek/deepseek-chat',
         messages: [{ role: 'user', content: prompt }],
         max_tokens: 2000,
-        temperature: 0.8,
+        temperature: 0.7, // Bajamos un poco la temperatura para que sea menos "creativo" y más obediente
         top_p: 0.8,
       }),
     });
