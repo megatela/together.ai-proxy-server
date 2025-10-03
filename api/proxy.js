@@ -65,7 +65,7 @@ export default async function handler(req, res) {
         // ============================================================
         // ========= CAMBIO #2: NUEVO MODELO DE IA (LLAMA 3) =========
         // ============================================================
-        model: 'meta-llama/Llama-3-8B-Instruct-hf',
+        model: 'meta-llama/llama-3-8b-instruct',
         messages: messages, // Usamos la nueva estructura de mensajes
         max_tokens: 2000,
         temperature: 0.7,
