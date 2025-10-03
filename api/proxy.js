@@ -20,34 +20,37 @@ export default async function handler(req, res) {
     const { keywords, articleTopic, searchIntent, wordCount, language, toneStyle, externalLinks, editingOutline, realtimeKnowledge } = req.body;
 
     // =========================================================================
-    // ========= INICIO DE LA MODIFICACIÓN: PROMPT MÁS ESTRICTO Y DIRECTO =========
+    // ========= INICIO DE LA MODIFICACIÓN: NUEVO PROMPT ESTRUCTURADO =========
     // =========================================================================
 
-    let prompt = `Tu tarea principal y única es escribir un artículo de alta calidad.
+    // Creamos una estructura de "mensajes" con roles de sistema y usuario
+    const messages = [
+        {
+            role: 'system',
+            content: 'Eres un experto redactor de artículos SEO multilingüe. Tu misión es escribir artículos de alta calidad siguiendo las instrucciones del usuario al pie de la letra. La instrucción más importante es siempre el TEMA PRINCIPAL.'
+        },
+        {
+            role: 'user',
+            content: `Por favor, escribe un artículo siguiendo estas especificaciones exactas:
 
-LA INSTRUCCIÓN MÁS IMPORTANTE E INNEGOCIABLE ES EL TEMA. IGNORA CUALQUIER OTRA COSA SI ENTRA EN CONFLICTO CON ESTO.
-EL TEMA PRINCIPAL DEL ARTÍCULO ES: "${articleTopic}"
+### ORDEN DE TRABAJO ###
 
-Ahora, debes escribir el artículo siguiendo ESTRICTAMENTE las siguientes reglas secundarias:
+- **TEMA PRINCIPAL (Instrucción prioritaria):** ${articleTopic}
+- **Palabras Clave de Apoyo:** ${keywords}
+- **Intención de Búsqueda:** ${searchIntent}
+- **Longitud Máxima:** ${wordCount} palabras
+- **Idioma:** ${language}
+- **Tono y Estilo:** ${toneStyle}
+- **Incluir Enlaces Externos:** ${externalLinks ? 'Sí' : 'No'}
+- **Incluir Esquema de Edición:** ${editingOutline ? 'Sí' : 'No'}
+- **Usar Conocimiento Actualizado:** ${realtimeKnowledge ? 'Sí' : 'No'}
 
-1.  **PALABRAS CLAVE DE APOYO:** Integra de forma natural las siguientes palabras clave a lo largo del texto: ${keywords}.
-2.  **INTENCIÓN:** La intención de búsqueda es ${searchIntent}.
-3.  **LONGITUD:** La extensión MÁXIMA es de ${wordCount} palabras. NO excedas esta cantidad.
-4.  **IDIOMA:** El artículo debe estar escrito en ${language}.
-5.  **TONO:** El tono y estilo debe ser ${toneStyle}.
-6.  **FORMATO:** El resultado debe ser texto plano. NO USES FORMATO MARKDOWN. No incluyas ningún carácter como '#', '**', o '-' para listas. Usa solo saltos de línea para separar párrafos.
-`;
-
-    if (editingOutline) {
-        prompt += `7. **ESQUEMA:** Primero, proporciona un esquema de edición detallado para el artículo. Luego, escribe el artículo completo basándote en ese esquema.\n`;
-    }
-    
-    if (externalLinks) {
-        prompt += `8. **ENLACES:** Incluye sugerencias de enlaces externos relevantes.\n`;
-    }
+**REGLA DE FORMATO CRÍTICA:** Formatea la respuesta completa usando Markdown (usa '#', '##', '###' para títulos y subtítulos, '**' para negritas, y '*' para listas).`
+        }
+    ];
 
     // =======================================================================
-    // ========= FIN DE LA MODIFICACIÓN: PROMPT MÁS ESTRICTO Y DIRECTO =========
+    // ========= FIN DE LA MODIFICACIÓN: NUEVO PROMPT ESTRUCTURADO =========
     // =======================================================================
 
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -59,10 +62,13 @@ Ahora, debes escribir el artículo siguiendo ESTRICTAMENTE las siguientes reglas
         'X-Title': 'Generador de Articulos IA' 
       },
       body: JSON.stringify({
-        model: 'deepseek/deepseek-chat',
-        messages: [{ role: 'user', content: prompt }],
+        // ============================================================
+        // ========= CAMBIO #2: NUEVO MODELO DE IA (LLAMA 3) =========
+        // ============================================================
+        model: 'meta-llama/Llama-3-8B-Instruct-hf',
+        messages: messages, // Usamos la nueva estructura de mensajes
         max_tokens: 2000,
-        temperature: 0.7, // Bajamos un poco la temperatura para que sea menos "creativo" y más obediente
+        temperature: 0.7,
         top_p: 0.8,
       }),
     });
