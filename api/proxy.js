@@ -17,25 +17,33 @@ export default async function handler(req, res) {
       throw new Error("La clave API de OpenRouter no está configurada en el servidor.");
     }
 
-    const { keywords, searchIntent, wordCount, language, toneStyle, externalLinks, editingOutline, realtimeKnowledge } = req.body;
+    // ======================================================
+    // ========= CAMBIO #1: Recogemos el nuevo dato =========
+    // ======================================================
+    const { keywords, articleTopic, searchIntent, wordCount, language, toneStyle, externalLinks, editingOutline, realtimeKnowledge } = req.body;
 
-    let prompt = `Genera un artículo completo y bien estructurado.`;
+    // ========================================================
+    // ========= CAMBIO #2: Mejoramos el prompt con el tema =========
+    // ========================================================
+    let prompt = `Genera un artículo completo y bien estructurado sobre el siguiente tema principal: "${articleTopic}".
+Usa las siguientes palabras clave de apoyo de forma natural a lo largo del texto: ${keywords}.`;
+
     if (editingOutline) {
-        prompt += ` Primero, proporciona un esquema de edición detallado. Luego, escribe el artículo basándote en ese esquema.`;
+        prompt += `\nPrimero, proporciona un esquema de edición detallado para el artículo. Luego, escribe el artículo basándote en ese esquema.`;
     }
+    
     prompt += `
-      Palabras clave: ${keywords}.
-      Intención de búsqueda: ${searchIntent}.
-      Extensión MÁXIMA: ${wordCount} palabras. No excedas esta cantidad.
-      Idioma: ${language}.
-      Tono y estilo: ${toneStyle}.`;
+      El artículo debe cumplir las siguientes condiciones:
+      - Intención de búsqueda: ${searchIntent}.
+      - Extensión MÁXIMA: ${wordCount} palabras. No excedas esta cantidad.
+      - Idioma: ${language}.
+      - Tono y estilo: ${toneStyle}.`;
+      
     if (externalLinks) {
-        prompt += `\nIncluye sugerencias de enlaces externos relevantes.`;
+        prompt += `\n- Incluye sugerencias de enlaces externos relevantes.`;
     }
-    if (realtimeKnowledge) {
-      prompt += `\nUtiliza conocimiento general actualizado si es relevante para el tema.`;
-    }
-    prompt += `\nEl artículo debe ser coherente, atractivo y cumplir con todas las especificaciones.`;
+    
+    prompt += `\nEl resultado debe ser coherente, atractivo y formateado en Markdown.`;
 
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
@@ -48,7 +56,7 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         model: 'deepseek/deepseek-chat',
         messages: [{ role: 'user', content: prompt }],
-        max_tokens: 2000, // Límite ajustado para ~1500 palabras
+        max_tokens: 2000,
         temperature: 0.8,
         top_p: 0.8,
       }),
